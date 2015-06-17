@@ -1,0 +1,157 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[british]{babel}
+\usepackage{authblk}
+\usepackage[binary,amssymb]{SIunits}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{noweb}
+% Needed to relax penalty for breaking code chunks across pages, otherwise 
+% there might be a lot of space following a code chunk.
+\def\nwendcode{\endtrivlist \endgroup}
+\let\nwdocspar=\smallbreak
+
+\usepackage{csquotes}
+\MakeBlockQuote{<}{|}{>}
+\EnableQuotes
+
+%\usepackage[natbib,style=alphabetic,backend=bibtexu]{biblatex}
+%\addbibresource{libsci.bib}
+
+\title{%
+  libsci: Python with Scientific Correctness
+}
+\author{Daniel Bosk}
+\affil{%
+  School of Computer Science and Communication,\\
+  KTH Royal Institute of Technology, SE-100\,44 Stockholm
+}
+\date{Version 1.0 (draft)}
+
+\begin{document}
+\maketitle
+
+%\begin{abstract}
+%\dots
+%\end{abstract}
+
+\tableofcontents
+
+@
+\section{Introduction}
+
+We want to add miscellaneous scientific functionality into a library.
+We use the library primarily with PythonTeX, so all output will be in LaTeX 
+format.
+
+Section \ref{sec:Outline} below gives an overview of the code while 
+Sect.~\ref{sec:FutureWork} covers some future work.
+
+\subsection{Outline}
+\label{sec:Outline}
+
+The program is a Python 3 script, [[<<libsci.py>>]].
+We will use the following structure:
+<<libsci.py>>=
+#!/usr/bin/env python3
+<<imports>>
+<<functions>>
+<<classes>>
+@ Then we will successively specify what these mean.
+The [[<<imports>>]] will contain our imported modules.
+The code blocks [[<<classes>>]] and [[<<functions>>]] will contain our classes 
+and functions, respectively.
+
+
+\section{Printing with Scientific Precision}
+
+The imported \dots
+<<imports>>=
+import math
+import decimal
+@ The imported \dots
+
+Some functins \dots
+<<functions>>=
+def sciround( x, n ):
+  <<sciround function body>>
+@ Which are good \dots
+
+Whatever \dots
+<<sciround function body>>=
+  if x == 0:
+    return "0"
+  exponent = math.floor( math.log10( x ) )
+  ret = ( "{:." + str(n-1) + "f}" ).format( \
+    round( x / math.pow( 10, exponent ), n-1 ) )
+  ret += r"\times 10^{" + str( int( exponent ) )
+  ret += r"}"
+  return ret
+@
+
+
+\section{The Class SciDecimal}
+\label{sec:SciDecimal}
+
+The [[SciDecimal]] class extends the Python class [[Decimal]] in that it 
+correctly keeps track of significant digits throughout chains of arithmetic 
+operations.
+<<classes>>=
+class SciDecimal (Decimal):
+  <<SciDecimal methods>>
+@ As such, then methods we need to overload are:
+<<SciDecimal methods>>=
+def __add__( self, n ):
+  <<body of add method>>
+
+def __sub__( self, n ):
+  <<body of sub method>>
+
+def __mul__( self, n ):
+  <<body of mul method>>
+
+def __div__( self, n ):
+  <<body of div method>>
+@
+
+
+\section{TeXDecimal}
+
+<<classes>>=
+class TeXDecimal (SciDecimal):
+  <<TeXDecimal methods>>
+@
+
+
+\section{Future Work}
+\label{sec:FutureWork}
+
+There are things that would be worth extending in this solution.
+We give a list below, somewhat in order of priority.
+(Or order of complexity, so easiest first.)
+
+\dots
+
+
+\section*{Acknowledgements}
+
+This program was developed as part of my research.
+Hence this program's development was funded by
+the Swedish Foundation for Strategic Research grant SSF FFL09-0086
+and the Swedish Research Council grant VR 2009-3793.
+
+This code is available under the following MIT license:
+\begin{quote}
+  \input{LICENSE}
+\end{quote}
+
+
+%\printbibliography
+
+
+\section*{An Index of the Code Blocks}
+
+\nowebchunks
+\end{document}
