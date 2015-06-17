@@ -1,4 +1,4 @@
 libsci
 ===============================================================================
 
-A library for doing Python with scientific correctness.
+A library for scientific correctness with Python
