@@ -8,6 +8,9 @@
 \usepackage{amssymb}
 \usepackage[defblank]{paralist}
 
+\usepackage[natbib,style=alphabetic]{biblatex}
+\addbibresource{libsci.bib}
+
 \usepackage{noweb}
 % Needed to relax penalty for breaking code chunks across pages, otherwise 
 % there might be a lot of space following a code chunk.
@@ -15,7 +18,7 @@
 \let\nwdocspar=\smallbreak
 
 \usepackage{csquotes}
-%\MakeBlockQuote{<}{|}{>}
+\MakeBlockQuote{<}{§}{>}
 \EnableQuotes
 
 %\usepackage[natbib,style=alphabetic,backend=bibtexu]{biblatex}
@@ -84,14 +87,44 @@ class SciDecimal (decimal.Decimal):
   <<SciDecimal constructors>>
   <<SciDecimal methods>>
   <<SciDecimal overloaded operators>>
+@ And we need to import the [[decimal]] module:
+<<imports>>=
+import decimal
 @
+
+\subsection{Computing the Mean}
+
+Since we base our class on the [[Decimal]] class, we can also rely on Python's 
+[[statistics]] module to compute mean, variance and standard deviation.
+
+
+\section{The TeXDecimal Class}
+
+<<classes>>=
+class TeXDecimal (SciDecimal):
+  <<TeXDecimal constructors>>
+  <<TeXDecimal methods>>
+  <<TeXDecimal overloaded operators>>
+@
+
+<<TeXDecimal methods>>=
+def __str__( self ):
+  exponent = math.floor( math.log10( x ) )
+  ret = ( "{:." + str(n-1) + "f}" ).format( \
+    round( x / math.pow( 10, exponent ), n-1 ) )
+  ret += r"\times 10^{" + str( int( exponent ) )
+  ret += r"}"
+  return ret
+@
+
 
 \section{The StatDecimal Class}
 \label{sec:StatDecimal}
 
 The [[StatDecimal]] class further extends the [[SciDecimal]] class in that it 
-correctly keeps track of standard deviation throughout chains of arithmetic 
-operations.
+correctly keeps track of the statistical parameters throughout chains of 
+arithmetic operations.
+This means that we want to do arithmetic with stochastic parameters.
 We start with the following overview of the class:
 <<classes>>=
 class StatDecimal (SciDecimal):
@@ -100,23 +133,30 @@ class StatDecimal (SciDecimal):
   <<StatDecimal overloaded operators>>
 @
 
-To construct a [[StatDecimal]] number, we need a value and its standard 
-deviation.
+To construct a [[StatDecimal]] <number>, i.e.~a stochastic parameter, we need 
+a value, its variance and its statistical distribution.
 Thus we define the default constructor as
 <<StatDecimal constructors>>=
-def __init__( self, value, stddev=0 ):
+def __init__( self, value, variance=0 ):
   super( value )
-  self.__stddev = stddev
-@ We let the standard deviation ([[stddev]] attribute) default to zero, as that 
-is the expected behaviour for non-statistical values.
+  self.__variance = SciDecimal( variance )
+@ We let the standard deviation ([[variance]] attribute) default to zero, as 
+that is the expected behaviour for non-statistical values.
 We do not store a separate value, we rely on the parent class ([[super]]) for 
 that.
 
-We also want to have a way of getting the standard deviation from an object.
-To achieve this we add the following method:
+We also want to have a way of reading the stochastic parameters from an object.
+To achieve this we add a methods for each parameter, e.g.~variance or standard 
+deviation.
+We already know the variance, so it is easy to just have a method to return it:
+<<StatDecimal methods>>=
+def variance( self ):
+  return self.__variance
+@ Similarly, it is easy to compute the standard deviation from the variance, so 
+we can also add this method:
 <<StatDecimal methods>>=
 def stddev( self ):
-  return self.__stddev
+  return self.__variance.sqrt()
 @
 
 \subsection{Overloaded Addition and Multiplication}
@@ -130,80 +170,40 @@ For addition, we let
 <<StatDecimal overloaded operators>>=
 def __add__( self, other ):
   super.__add__( other )
-  <<handle stddev for addition>>
+  <<handle variance for addition>>
 @ We let the super class handle the actual addition, we only need to handle the 
 standard deviation properly.
 For addition, the resultant standard deviation should be the larger of the two, 
 hence we let
-<<handle stddev for addition>>=
-self.__stddev = max( self.__stddev, other.__stddev )
-@ Since subtraction is addition with the inverse, we can define subtraction 
-similarly:
+<<handle variance for addition>>=
+self.__variance = self.__variance + other.__variance
+@ Subtraction is different from addition.
+We need to handle the variance differently, but we can define subtraction 
+similarly as addition:
 <<StatDecimal overloaded operators>>=
 def __sub__( self, other ):
   super.__sub__( other )
-  <<handle stddev for addition>>
+  <<handle variance for subtraction>>
+@ The variance in a subtraction operation must be handled as
+<<handle variance for subtraction>>=
+pass
 @
 
-Multiplication can be handled in similar manner as addition, but how to handle 
-the standard deviation is different.
-We let
+Multiplication and division are much different as multiplication of two 
+variables changes the statistical distribution.
+For now, we let
 <<StatDecimal overloaded operators>>=
 def __mul__( self, other ):
   super.__mul__( other )
-  <<handle stddev for multiplication>>
+  <<handle variance for multiplication>>
 def __div__( self, other ):
   super.__div__( other )
-  <<handle stddev for division>>
-@ and note that the handling of standard deviation for multiplication and 
-division differ.
-We handle the standard deviation for multiplication by
-<<handle stddev for multiplication>>=
-self.__stddev__ = ?
-@
-We then define the handling of the standard deviation for division as
-<<handle stddev for division>>=
-self.__stddev__ = ?
+  <<handle variance for division>>
 @
 
 \subsection{Overloaded String Conversion}
 
 \dots
-
-
-\section{The TeXDecimal Class}
-
-<<classes>>=
-class TeXDecimal (StatDecimal):
-  <<TeXDecimal constructors>>
-  <<TeXDecimal methods>>
-  <<TeXDecimal overloaded operators>>
-@
-
-
-\section{Computing Average and Standard Deviation}
-
-Thus we let
-<<compute the variance>>=
-def variance( values ):
-  mu = sum( values ) / len( values )
-  v = sum( map( lambda x: (x - mu)**2, values ) ) / len( values )
-  return v
-@
-<<compute the standard deviation>>=
-def stddev( values ):
-  return variance( values ).sqrt()
-@
-<<compute the average>>=
-def average( values ):
-  mu = sum( values ) / len( values )
-  sigma = variance( values ).sqrt()
-  return SciDecimal( mu, sigma )
-@ and
-<<compute the standard-deviation \(\sigma\)>>=
-#sigma = variance.sqrt()
-sigma = libsci.variance( values ).sqrt()
-@
 
 
 \section{Future Work}
@@ -229,7 +229,7 @@ This code is available under the following MIT license:
 \end{quote}
 
 
-%\printbibliography
+\printbibliography
 
 
 \section*{An Index of the Code Blocks}
