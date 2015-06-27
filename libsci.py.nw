@@ -6,6 +6,7 @@
 \usepackage[binary,amssymb]{SIunits}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage[defblank]{paralist}
 
 \usepackage{noweb}
 % Needed to relax penalty for breaking code chunks across pages, otherwise 
@@ -14,19 +15,24 @@
 \let\nwdocspar=\smallbreak
 
 \usepackage{csquotes}
-\MakeBlockQuote{<}{|}{>}
+%\MakeBlockQuote{<}{|}{>}
 \EnableQuotes
 
 %\usepackage[natbib,style=alphabetic,backend=bibtexu]{biblatex}
 %\addbibresource{libsci.bib}
 
 \title{%
-  libsci: Python with Scientific Correctness
+  libsci: Python for Scientific Precision in Writing
 }
-\author{Daniel Bosk}
-\affil{%
-  School of Computer Science and Communication,\\
-  KTH Royal Institute of Technology, SE-100\,44 Stockholm
+\author[1]{Daniel Bosk}
+\affil[1]{%
+  School of Computer Science and Communication,
+  KTH Royal Institute of Technology, SE-100\,44 Stockholm.
+  Email: \texttt{dbosk@kth.se}
+}
+\author[2]{Mitra Damghaninan}
+\affil[2]{%
+  Email: \texttt{mitra@damghanian.se}
 }
 \date{Version 1.0 (draft)}
 
@@ -42,86 +48,161 @@
 @
 \section{Introduction}
 
-We want to add miscellaneous scientific functionality into a library.
-We use the library primarily with PythonTeX, so all output will be in LaTeX 
-format.
-
-Section \ref{sec:Outline} below gives an overview of the code while 
-Sect.~\ref{sec:FutureWork} covers some future work.
+This library is intended as an interface between a LaTeX paper and the tools 
+used for running the experiments.
+It is intended to be used with e.g.~PythonTeX, so the output is optimized to be 
+typeset in LaTeX rather than being output in the terminal.
 
 \subsection{Outline}
 \label{sec:Outline}
 
-The program is a Python 3 script, [[<<libsci.py>>]].
-We will use the following structure:
+The program is a Python 3 module, [[<<libsci.py>>]].
+The module has the following structure:
 <<libsci.py>>=
-#!/usr/bin/env python3
 <<imports>>
 <<functions>>
 <<classes>>
-@ Then we will successively specify what these mean.
-The [[<<imports>>]] will contain our imported modules.
-The code blocks [[<<classes>>]] and [[<<functions>>]] will contain our classes 
+@ The code chunk [[<<imports>>]] will contain our imported modules.
+The code chunks [[<<classes>>]] and [[<<functions>>]] will contain our classes 
 and functions, respectively.
+Throughout this paper we will add code to these chunks.
+Each section is independent and focuses on one functionality provided by the 
+library.
 
 
-\section{Printing with Scientific Precision}
+\section{The SciDecimal Class}
 
-The imported \dots
-<<imports>>=
-import math
-import decimal
-@ The imported \dots
-
-Some functins \dots
-<<functions>>=
-def sciround( x, n ):
-  <<sciround function body>>
-@ Which are good \dots
-
-Whatever \dots
-<<sciround function body>>=
-  if x == 0:
-    return "0"
-  exponent = math.floor( math.log10( x ) )
-  ret = ( "{:." + str(n-1) + "f}" ).format( \
-    round( x / math.pow( 10, exponent ), n-1 ) )
-  ret += r"\times 10^{" + str( int( exponent ) )
-  ret += r"}"
-  return ret
-@
-
-
-\section{The Class SciDecimal}
-\label{sec:SciDecimal}
-
-The [[SciDecimal]] class extends the Python class [[Decimal]] in that it 
-correctly keeps track of significant digits throughout chains of arithmetic 
-operations.
+The [[SciDecimal]] class extends the class [[Decimal]] from Python's 
+[[decimal]] module.
+The extended functionality is keeping track of the significant digits, so that 
+the correct number of digits is used when printed.
+To be able to do this we need to overload certain operators in the parent 
+([[super]]) class.
+We start with the following overview structure of the class:
 <<classes>>=
-class SciDecimal (Decimal):
+class SciDecimal (decimal.Decimal):
+  <<SciDecimal constructors>>
   <<SciDecimal methods>>
-@ As such, then methods we need to overload are:
-<<SciDecimal methods>>=
-def __add__( self, n ):
-  <<body of add method>>
+  <<SciDecimal overloaded operators>>
+@
 
-def __sub__( self, n ):
-  <<body of sub method>>
+\section{The StatDecimal Class}
+\label{sec:StatDecimal}
 
-def __mul__( self, n ):
-  <<body of mul method>>
+The [[StatDecimal]] class further extends the [[SciDecimal]] class in that it 
+correctly keeps track of standard deviation throughout chains of arithmetic 
+operations.
+We start with the following overview of the class:
+<<classes>>=
+class StatDecimal (SciDecimal):
+  <<StatDecimal constructors>>
+  <<StatDecimal methods>>
+  <<StatDecimal overloaded operators>>
+@
 
-def __div__( self, n ):
-  <<body of div method>>
+To construct a [[StatDecimal]] number, we need a value and its standard 
+deviation.
+Thus we define the default constructor as
+<<StatDecimal constructors>>=
+def __init__( self, value, stddev=0 ):
+  super( value )
+  self.__stddev = stddev
+@ We let the standard deviation ([[stddev]] attribute) default to zero, as that 
+is the expected behaviour for non-statistical values.
+We do not store a separate value, we rely on the parent class ([[super]]) for 
+that.
+
+We also want to have a way of getting the standard deviation from an object.
+To achieve this we add the following method:
+<<StatDecimal methods>>=
+def stddev( self ):
+  return self.__stddev
+@
+
+\subsection{Overloaded Addition and Multiplication}
+
+The operators we need to overload are
+\begin{inparablank}
+\item addition (and subtraction) and
+\item multiplication (and division).
+\end{inparablank}
+For addition, we let
+<<StatDecimal overloaded operators>>=
+def __add__( self, other ):
+  super.__add__( other )
+  <<handle stddev for addition>>
+@ We let the super class handle the actual addition, we only need to handle the 
+standard deviation properly.
+For addition, the resultant standard deviation should be the larger of the two, 
+hence we let
+<<handle stddev for addition>>=
+self.__stddev = max( self.__stddev, other.__stddev )
+@ Since subtraction is addition with the inverse, we can define subtraction 
+similarly:
+<<StatDecimal overloaded operators>>=
+def __sub__( self, other ):
+  super.__sub__( other )
+  <<handle stddev for addition>>
+@
+
+Multiplication can be handled in similar manner as addition, but how to handle 
+the standard deviation is different.
+We let
+<<StatDecimal overloaded operators>>=
+def __mul__( self, other ):
+  super.__mul__( other )
+  <<handle stddev for multiplication>>
+def __div__( self, other ):
+  super.__div__( other )
+  <<handle stddev for division>>
+@ and note that the handling of standard deviation for multiplication and 
+division differ.
+We handle the standard deviation for multiplication by
+<<handle stddev for multiplication>>=
+self.__stddev__ = ?
+@
+We then define the handling of the standard deviation for division as
+<<handle stddev for division>>=
+self.__stddev__ = ?
+@
+
+\subsection{Overloaded String Conversion}
+
+\dots
+
+
+\section{The TeXDecimal Class}
+
+<<classes>>=
+class TeXDecimal (StatDecimal):
+  <<TeXDecimal constructors>>
+  <<TeXDecimal methods>>
+  <<TeXDecimal overloaded operators>>
 @
 
 
-\section{TeXDecimal}
+\section{Computing Average and Standard Deviation}
 
-<<classes>>=
-class TeXDecimal (SciDecimal):
-  <<TeXDecimal methods>>
+Thus we let
+<<compute the variance>>=
+def variance( values ):
+  mu = sum( values ) / len( values )
+  v = sum( map( lambda x: (x - mu)**2, values ) ) / len( values )
+  return v
+@
+<<compute the standard deviation>>=
+def stddev( values ):
+  return variance( values ).sqrt()
+@
+<<compute the average>>=
+def average( values ):
+  mu = sum( values ) / len( values )
+  sigma = variance( values ).sqrt()
+  return SciDecimal( mu, sigma )
+@ and
+<<compute the standard-deviation \(\sigma\)>>=
+#sigma = variance.sqrt()
+sigma = libsci.variance( values ).sqrt()
 @
 
 
