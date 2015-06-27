@@ -121,6 +121,38 @@ def __str__( self ):
 \section{The StatDecimal Class}
 \label{sec:StatDecimal}
 
+A stochastic parameter has some sort of randomness (non-deterministic nature) and is associated with a probability distribution. To do statistical analysis we need statistical modelling and for that we need to know what is the probability distribution of the stochastic parameter. One way to find out what probability distribution the stochastic parameter has is to have a large number of observations and then look into the histogram of those observations. The next step is a model selection, which is the task of selecting a statistical model from a set of candidate models. After model selection, we can extract the model parameters with e.g. curve fitting method. 
+
+To be able to add and multiply stochastic parameters, we need the knowledge of the algebra for stochastic parameters. Since we encounter many stochastic parameters which have normal probability distribution, it is worthy to look into the algebra of normal distributions:
+
+\begin{itemize}
+
+\item What is the sum of two independent stochastic parameters each having a normal distribution? 
+The sum is another stochastic parameter with the mean equal to the sum of the means and variance equal to the sum of the variances, 
+\mu_{X+Y} = \mu_{X} + \mu_{Y} 
+\sigma^{2}_{X+Y} = \sigma^{2}_{X} + \sigma^{2}_{Y}.
+
+\item What is the difference of two independent stochastic parameters each having a normal distribution? 
+The difference is another stochastic parameter with the mean equal to the difference of the means and variance equal to the sum of the variances, 
+\mu_{X-Y} = \mu_{X} - \mu_{Y} 
+\sigma^{2}_{X-Y} = \sigma^{2}_{X} + \sigma^{2}_{Y}.
+
+\item What is the ratio of two independent stochastic parameters each having a normal distribution?
+Assuming both distributions have a mean equal to zero, the ratio will be another stochastic parameter with a new type of probability distribution called Cauchy distribution,
+U = X / Y
+P(U) =  (\sigma_{X} / \sigma_{Y}) / ( \pi (u^{2} + (\sigma_{X} / \sigma_{Y})^2))
+
+\item What is the multiplication of two independent stochastic parameters each having a normal distribution? 
+Assuming both distributions have a mean equal to zero, the multiplication will be another stochastic parameter with a new type of probability distribution as:
+U = X . Y
+P(U) = K_{0}( |u| / (\sigma_{X} . \sigma_{Y}) ) / ( \pi . \sigma_{X} . \sigma_{Y})
+where K_{n}(z) is the modified Bessel function of the second kind and
+K_{0}(z) = \int_{0}^{\infty}\frac{\cos(zt)}{\sqrt{t^2+1}}dt
+
+\end{itemize}
+
+\subsection{Implementation}
+
 The [[StatDecimal]] class further extends the [[SciDecimal]] class in that it 
 correctly keeps track of the statistical parameters throughout chains of 
 arithmetic operations.
