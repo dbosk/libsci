@@ -8,6 +8,15 @@
 \usepackage{amssymb}
 \usepackage[defblank]{paralist}
 
+\usepackage{listings}
+\lstset{%
+  language=Python,
+  numbers=left,
+  tabsize=2,
+  basicstyle=\small,
+  frame=topbottom
+}
+
 \usepackage[natbib,style=alphabetic]{biblatex}
 \addbibresource{libsci.bib}
 
@@ -96,6 +105,19 @@ import decimal
 
 Since we base our class on the [[Decimal]] class, we can also rely on Python's 
 [[statistics]] module to compute mean, variance and standard deviation.
+We illustrate this use with the small example in Fig.~\ref{fig:pystatistics}.
+\begin{lstlisting}[float,caption={An example program using SciDecimal and 
+Python's statistics.},label={fig:pystatistics}]
+import libsci
+import statistics
+
+values = list( map( \
+  lambda x: libsci.SciDecimal( x ), \
+  [ 1, 2, 3, 4, 5 ] ) )
+
+print( "mean: %s" % ( statistics.mean( values ) ) )
+print( "stddev: %s" % ( statistics.stdev( values ) ) )
+\end{lstlisting}
 
 
 \section{The TeXDecimal Class}
