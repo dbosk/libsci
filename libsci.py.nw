@@ -106,7 +106,7 @@ import decimal
 
 Since we base our class on the [[Decimal]] class, we can also rely on Python's 
 [[statistics]] module to compute mean, variance and standard deviation.
-We illustrate this use with the small example in Fig.~\ref{fig:pystatistics}.
+We illustrate this use with the small example in List.~\ref{fig:pystatistics}.
 \begin{lstlisting}[float,caption={An example program using SciDecimal and 
 Python's statistics.},label={fig:pystatistics}]
 import libsci
