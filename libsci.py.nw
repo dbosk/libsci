@@ -8,6 +8,7 @@
 \usepackage{amssymb}
 \usepackage{commath}
 \usepackage[defblank]{paralist}
+\usepackage{pythontex}
 
 \usepackage{listings}
 \lstset{%
@@ -83,41 +84,142 @@ Each section is independent and focuses on one functionality provided by the
 library.
 
 
-\section{The SciDecimal Class}
+\section{Correctly Handling Significant Digits}
 
-The [[SciDecimal]] class extends the class [[Decimal]] from Python's 
-[[decimal]] module.
+In this section we will develop the [[SciDecimal]] class.
+This class extends the class [[Decimal]] from Python's [[decimal]] module.
 The extended functionality is keeping track of the significant digits, so that 
-the correct number of digits is used when printed.
+the correct number of digits is used when the number is printed.
 To be able to do this we need to overload certain operators in the parent 
 ([[super]]) class.
-We start with the following overview structure of the class:
+But we start with the following overview structure of the class:
 <<classes>>=
 class SciDecimal (decimal.Decimal):
   <<SciDecimal constructors>>
   <<SciDecimal methods>>
   <<SciDecimal overloaded operators>>
-@ And we need to import the [[decimal]] module:
+@ Since we rely on the [[decimal]] module, we also need to import it:
 <<imports>>=
 import decimal
 @
 
+\subsection{Constructing a Number}
+
+We start by constructing the number.
+There are two ways for estimating the number of significant digits.
+The first is to use a number with the correct number of significant digits.
+In this case we can rely on the constructor of [[Decimal]] to handle the 
+construction.
+Thus we can start with the following code:
+<<SciDecimal constructors>>=
+def __init__( self, value, stddev=0 ):
+  super( value )
+  <<Compute the number of significant digits>>
+@ The other case is a mean value, i.e.~a number with an unknown number of 
+significant digits, but with a known standard deviation.
+
+What we would like to do next in the constructor is to determine the number of 
+significant digits.
+If the standard deviation ([[stddev]]) is zero, then we assume that [[value]] 
+is an exact number~\cite[p.~4]{TutSigFig}.
+We start with this case.
+Then our first option is that [[value]] is of the type [[SciDecimal]], in that 
+case we can use that value:
+<<Compute the number of significant digits>>=
+if stddev == 0 and hasattr( other, "__sigdigs" ):
+  self.__sigdigs = other.__sigdigs
+@ Otherwise, we use a zero to indicate that we have <infinitely> many 
+significant digits:
+<<Compute the number of significant digits>>=
+elif stddev == 0:
+  self.__sigdigs = 0
+@ We use the zero as Python's integers have arbitrary precision, so there is no 
+<max int> of any kind.
+
+The next case is that the standard deviation is non-zero:
+<<Compute the number of significant digits>>=
+elif stddev > 0:
+  <<Compute significant digits from stddev>>
+@ In this case we can use the standard deviation to estimate the number of 
+significant digits.
+
+<<Number of significant digits in stddev>>=
+  digits = str( super ).replace( ".", "" ).replace( "-", "" ).lstrip( "0" )
+  self.__sigdigs = len( digits )
+@ But we have to make sure to remove any of the possible symbols and all 
+leading zeros \cite[p.~3]{TutSigFig}, we are only interested in the significant 
+digits.
+
+
+\subsection{The Arithmetic Operations}
+
+The arithmetic operations we are interested in are:
+\begin{inparablank}
+\item addition and subtraction,
+\item multiplication and division.
+\end{inparablank}
+
+For addition and subtraction, we must round off to the last common of the most 
+significant digits of all operands~\cite[p.~5]{TutSigFig}.
+For example, \(100\) with one significant digit, \(25\) with two significant 
+digits, will give \(100 + 25 = 100\).
+
+For multiplication and division, the result will have the minimum number of 
+significant digits of all operands~\cite[p.~5]{TutSigFig}.
+For example, with \(100\) and \(25\) as above, \(100\times 25 = 3000\).
+
+\subsection{Transcendental Functions}
+
+For other operations than the arithmetic operations, we must take a different 
+approach.
+The number of significant digits in the result depends not only on the 
+significant digits in the input, but also on the condition number of the 
+function in question.
+The condition number is a measure of the function's sensitivity to change, and 
+for a differentiable function it can be defined as \(|x f^\prime(x) / f(x)|\) 
+  at a point \(x\).
+We leave this for future work.
+
 \subsection{Computing the Mean}
 
 Since we base our class on the [[Decimal]] class, we can also rely on Python's 
-[[statistics]] module to compute mean, variance and standard deviation.
+[[statistics]] module \cite{pystatistics} to compute mean, variance and 
+standard deviation.
+We can do this since all operations used in the computation are arithmetic 
+operations.
 We illustrate this use with the small example in List.~\ref{fig:pystatistics}.
+The output from the code is:
+%\begin{pycode}
+%import libsci
+%import statistics
+%
+%values = list( map( \
+%  lambda x: decimal.Decimal( x ), \
+%  [ 1, 2, 3, 4, 5 ] ) )
+%
+%mean = statistics.mean( values )
+%stddev = statistics.stdev( values )
+%
+%print( "mean = %s;" % ( statistics.mean( values ) ) )
+%print( "stddev = %s;" % ( statistics.stdev( values ) ) )
+%print( "SciDecimal = %s." % ( libsci.SciDecimal( mean, stddev ) ) )
+%\end{pycode}
+
 \begin{lstlisting}[float,caption={An example program using SciDecimal and 
 Python's statistics.},label={fig:pystatistics}]
 import libsci
 import statistics
 
 values = list( map( \
-  lambda x: libsci.SciDecimal( x ), \
+  lambda x: decimal.Decimal( x ), \
   [ 1, 2, 3, 4, 5 ] ) )
 
-print( "mean: %s" % ( statistics.mean( values ) ) )
-print( "stddev: %s" % ( statistics.stdev( values ) ) )
+mean = statistics.mean( values )
+stddev = statistics.stdev( values )
+
+print( "mean = %s;" % ( statistics.mean( values ) ) )
+print( "stddev = %s;" % ( statistics.stdev( values ) ) )
+print( "SciDecimal = %s." % ( libsci.SciDecimal( mean, stddev ) ) )
 \end{lstlisting}
 
 
@@ -282,7 +384,10 @@ There are things that would be worth extending in this solution.
 We give a list below, somewhat in order of priority.
 (Or order of complexity, so easiest first.)
 
-\dots
+Implement handling of transcendental functions in [[SciDecimal]].
+In some cases this is needed, e.g.~to compute the square root.
+However, the method suggested should be generalizable to the other operations 
+as well.
 
 
 \section*{Acknowledgements}
